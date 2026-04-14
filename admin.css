@@ -1,0 +1,343 @@
+:root {
+  --primary-text: #1a1a1a;
+  --accent-gold: #d9c5a3;
+  --accent-brown: #5c4b43;
+  --bg-cream: #fdfbf7;
+  --panel-bg: #ffffff;
+  --line: #ece7df;
+  --muted: #7a746f;
+  --success: #2e7d32;
+  --warning: #d17b0f;
+  --danger: #c0392b;
+  --info: #2666cf;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "Inter", sans-serif;
+  background: #f7f5f2;
+  color: var(--primary-text);
+}
+
+.admin-layout {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+}
+
+.admin-sidebar {
+  background: var(--panel-bg);
+  border-right: 1px solid var(--line);
+  padding: 22px 14px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.admin-brand {
+  font-family: "Dancing Script", cursive;
+  font-size: 2rem;
+  color: var(--accent-brown);
+  text-decoration: none;
+  display: block;
+  padding: 4px 10px 14px;
+}
+
+.admin-subtitle {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--muted);
+  padding: 0 10px 14px;
+}
+
+.admin-nav {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-nav a {
+  text-decoration: none;
+  color: #433930;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-nav a:hover {
+  background: #f3eee8;
+}
+
+.admin-nav a.active {
+  background: var(--accent-brown);
+  color: #fff;
+}
+
+.admin-main {
+  padding: 22px 24px 30px;
+}
+
+.admin-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.admin-title {
+  font-family: "Playfair Display", serif;
+  font-size: 1.75rem;
+}
+
+.admin-meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.search-input {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  min-width: 230px;
+}
+
+.btn {
+  border: 1px solid transparent;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--accent-brown);
+  color: #fff;
+}
+
+.btn-primary:hover { background: #4b3e37; }
+
+.btn-ghost {
+  background: #fff;
+  border-color: var(--line);
+  color: var(--accent-brown);
+}
+
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.card .label {
+  font-size: 0.73rem;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--muted);
+}
+
+.card .value {
+  margin-top: 7px;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.card .delta {
+  margin-top: 6px;
+  font-size: 0.78rem;
+}
+
+.delta.up { color: var(--success); }
+.delta.warn { color: var(--warning); }
+.delta.down { color: var(--danger); }
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 14px;
+}
+
+.chart-placeholder {
+  height: 260px;
+  border: 1px dashed #d6ccbe;
+  border-radius: 10px;
+  display: grid;
+  place-content: center;
+  color: #998f84;
+  font-size: 0.88rem;
+  background: linear-gradient(180deg, #fff, #fdfbf8);
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 10px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.85rem;
+}
+
+th {
+  font-size: 0.72rem;
+  letter-spacing: 1.2px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.chip {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.chip.pending { background: #fff4e5; color: #aa6609; }
+.chip.paid { background: #e9f9ee; color: #1f7b3d; }
+.chip.shipped { background: #e8f1ff; color: #2058ac; }
+.chip.delivered { background: #e8f9f5; color: #15745b; }
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.toolbar .left,
+.toolbar .right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+select, input[type="text"], input[type="number"], input[type="email"], textarea {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 10px;
+  font-size: 0.84rem;
+  background: #fff;
+}
+
+textarea { resize: vertical; min-height: 90px; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-field {
+  display: grid;
+  gap: 6px;
+}
+
+.form-field label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #5a5149;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.full { grid-column: 1 / -1; }
+
+.muted {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 2000;
+}
+
+.modal-overlay.open {
+  display: flex;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 640px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.modal-header h2 {
+  font-family: "Playfair Display", serif;
+  font-size: 1.35rem;
+}
+
+@media (max-width: 1100px) {
+  .grid-cards { grid-template-columns: repeat(2, 1fr); }
+  .dashboard-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 860px) {
+  .admin-layout { grid-template-columns: 1fr; }
+  .admin-sidebar {
+    position: static;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .admin-nav { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  .admin-main { padding: 16px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .grid-cards { grid-template-columns: 1fr; }
+  .topbar-right { width: 100%; }
+  .search-input { min-width: 0; width: 100%; }
+}

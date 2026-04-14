@@ -1,0 +1,599 @@
+document.addEventListener('DOMContentLoaded', () => {
+  const authRaw = localStorage.getItem('artisanAuthUser');
+  let authUser = null;
+  try {
+    authUser = authRaw ? JSON.parse(authRaw) : null;
+  } catch (err) {
+    authUser = null;
+  }
+
+  if (!authUser || String(authUser.role || '').toLowerCase() !== 'admin') {
+    window.location.href = 'login.php';
+    return;
+  }
+
+  const adminLogoutBtn = document.getElementById('adminLogoutBtn');
+  if (adminLogoutBtn) {
+    adminLogoutBtn.addEventListener('click', () => {
+      localStorage.removeItem('artisanAuthUser');
+      window.location.href = 'login.php';
+    });
+  }
+
+  const dateNode = document.getElementById('todayDate');
+  if (dateNode) {
+    const now = new Date();
+    dateNode.textContent = now.toLocaleDateString('en-PH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+
+  const API_PRODUCTS = 'api/products.php';
+  const API_ORDERS = 'api/orders.php';
+  const API_CUSTOMERS = 'api/customers.php';
+  const API_USERS = 'api/users.php';
+  const API_UPLOAD_PRODUCT_IMAGE = 'api/upload-product-image.php';
+
+  const modal = document.getElementById('addProductModal');
+  const openBtn = document.getElementById('openAddProductModal');
+  const closeBtn = document.getElementById('closeAddProductModal');
+  const cancelBtn = document.getElementById('cancelAddProduct');
+  const form = document.getElementById('addProductForm');
+  const tableBody = document.getElementById('productsTableBody');
+  const ordersTableBody = document.getElementById('ordersTableBody');
+  const customersTableBody = document.getElementById('customersTableBody');
+  const dashboardRevenue = document.getElementById('dashboardRevenue');
+  const dashboardOrders = document.getElementById('dashboardOrders');
+  const dashboardAov = document.getElementById('dashboardAov');
+  const dashboardCustomers = document.getElementById('dashboardCustomers');
+  const dashboardLowStockBody = document.getElementById('dashboardLowStockBody');
+  const dashboardRecentOrdersBody = document.getElementById('dashboardRecentOrdersBody');
+  const usersTableBody = document.getElementById('usersTableBody');
+  const addUserModal = document.getElementById('addUserModal');
+  const openAddUserModal = document.getElementById('openAddUserModal');
+  const closeAddUserModal = document.getElementById('closeAddUserModal');
+  const cancelAddUser = document.getElementById('cancelAddUser');
+  const addUserForm = document.getElementById('addUserForm');
+  const addUserFeedback = document.getElementById('addUserFeedback');
+  const addProductFeedback = document.getElementById('addProductFeedback');
+  const newProductImage = document.getElementById('newProductImage');
+  const newProductImagePreview = document.getElementById('newProductImagePreview');
+  const editProductModal = document.getElementById('editProductModal');
+  const editProductForm = document.getElementById('editProductForm');
+  const closeEditProductModal = document.getElementById('closeEditProductModal');
+  const cancelEditProduct = document.getElementById('cancelEditProduct');
+  const editProductFeedback = document.getElementById('editProductFeedback');
+  const editProductImage = document.getElementById('editProductImage');
+  const editProductImagePreview = document.getElementById('editProductImagePreview');
+  const editProductImagePath = document.getElementById('editProductImagePath');
+  const confirmActionModal = document.getElementById('confirmActionModal');
+  const confirmActionMessage = document.getElementById('confirmActionMessage');
+  const confirmActionCancel = document.getElementById('confirmActionCancel');
+  const confirmActionOk = document.getElementById('confirmActionOk');
+  let pendingConfirmAction = null;
+  let productsCache = [];
+
+  const statusForStock = (stock) => ({
+    className: Number(stock) <= 7 ? 'pending' : 'paid',
+    label: Number(stock) <= 7 ? 'Low stock' : 'Active'
+  });
+
+  const renderRow = (item) => {
+    const status = statusForStock(item.stock);
+    const safeImg = item.image_path || '';
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${safeImg ? `<img src="${safeImg}" alt="${item.name}" style="width:44px; height:44px; object-fit:cover; border-radius:8px; border:1px solid #ece7df;">` : '—'}</td>
+      <td>${item.name}</td>
+      <td>${item.category}</td>
+      <td>₱${Number(item.price).toLocaleString('en-PH')}</td>
+      <td>${item.stock}</td>
+      <td><span class="chip ${status.className}">${status.label}</span></td>
+      <td>
+        <button class="btn btn-ghost product-edit-btn" data-id="${Number(item.id || 0)}" type="button">Edit</button>
+        <button class="btn btn-ghost product-delete-btn" data-id="${Number(item.id || 0)}" data-name="${item.name}" type="button">Delete</button>
+      </td>
+    `;
+    return row;
+  };
+
+  const loadProducts = async () => {
+    if (!tableBody) return;
+    try {
+      const response = await fetch(API_PRODUCTS);
+      if (!response.ok) return;
+      const payload = await response.json();
+      if (!payload.ok || !Array.isArray(payload.data)) return;
+      productsCache = payload.data;
+      tableBody.innerHTML = '';
+      payload.data.forEach((item) => tableBody.appendChild(renderRow(item)));
+    } catch (err) {
+      // Keep current static rows as graceful fallback.
+    }
+  };
+
+  const statusClassForOrder = (status) => {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'paid') return 'paid';
+    if (normalized === 'shipped') return 'shipped';
+    if (normalized === 'delivered') return 'delivered';
+    return 'pending';
+  };
+
+  const formatPeso = (value) => `₱${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const loadOrders = async () => {
+    if (!ordersTableBody) return;
+    try {
+      const response = await fetch(API_ORDERS);
+      if (!response.ok) return;
+      const payload = await response.json();
+      if (!payload.ok || !Array.isArray(payload.data)) return;
+      ordersTableBody.innerHTML = '';
+      payload.data.forEach((item) => {
+        const row = document.createElement('tr');
+        const date = new Date(item.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
+        const customerName = item.customer_name || item.customer_email || 'Guest Customer';
+        row.innerHTML = `
+          <td>#${item.order_code}</td>
+          <td>${customerName}</td>
+          <td>${Number(item.item_count || 0)}</td>
+          <td>${formatPeso(item.total)}</td>
+          <td><span class="chip ${statusClassForOrder(item.status)}">${item.status}</span></td>
+          <td>${date}</td>
+        `;
+        ordersTableBody.appendChild(row);
+      });
+    } catch (err) {
+      // Keep static rows as fallback.
+    }
+  };
+
+  const loadCustomers = async () => {
+    if (!customersTableBody) return;
+    try {
+      const response = await fetch(API_CUSTOMERS);
+      if (!response.ok) return;
+      const payload = await response.json();
+      if (!payload.ok || !Array.isArray(payload.data)) return;
+      customersTableBody.innerHTML = '';
+      payload.data.forEach((item) => {
+        const row = document.createElement('tr');
+        const date = item.last_order
+          ? new Date(item.last_order).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
+          : 'N/A';
+        row.innerHTML = `
+          <td>${item.name || 'Guest Customer'}</td>
+          <td>${item.email || 'N/A'}</td>
+          <td>${Number(item.total_orders || 0)}</td>
+          <td>${formatPeso(item.total_spent)}</td>
+          <td>${date}</td>
+        `;
+        customersTableBody.appendChild(row);
+      });
+    } catch (err) {
+      // Keep static rows as fallback.
+    }
+  };
+
+  const roleChipClass = (role) => String(role).toLowerCase() === 'admin' ? 'shipped' : 'paid';
+
+  const renderUserRow = (user) => {
+    const row = document.createElement('tr');
+    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'N/A';
+    const created = user.created_at
+      ? new Date(user.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
+      : 'N/A';
+    row.innerHTML = `
+      <td>${fullName}</td>
+      <td>${user.email || 'N/A'}</td>
+      <td><span class="chip ${roleChipClass(user.role)}">${user.role || 'customer'}</span></td>
+      <td>${created}</td>
+    `;
+    return row;
+  };
+
+  const loadUsers = async () => {
+    if (!usersTableBody) return;
+    try {
+      const response = await fetch(API_USERS);
+      if (!response.ok) return;
+      const payload = await response.json();
+      if (!payload.ok || !Array.isArray(payload.data)) return;
+      usersTableBody.innerHTML = '';
+      payload.data.forEach((user) => usersTableBody.appendChild(renderUserRow(user)));
+    } catch (err) {
+      // Keep static rows as fallback.
+    }
+  };
+
+  const loadDashboardStats = async () => {
+    if (!dashboardRevenue && !dashboardOrders && !dashboardAov && !dashboardCustomers) return;
+    try {
+      const [ordersRes, customersRes] = await Promise.all([
+        fetch(API_ORDERS),
+        fetch(API_CUSTOMERS)
+      ]);
+      if (!ordersRes.ok || !customersRes.ok) return;
+      const [ordersPayload, customersPayload] = await Promise.all([
+        ordersRes.json(),
+        customersRes.json()
+      ]);
+      if (!ordersPayload.ok || !Array.isArray(ordersPayload.data)) return;
+      if (!customersPayload.ok || !Array.isArray(customersPayload.data)) return;
+
+      const orders = ordersPayload.data;
+      const revenue = orders.reduce((sum, item) => sum + Number(item.total || 0), 0);
+      const orderCount = orders.length;
+      const aov = orderCount > 0 ? revenue / orderCount : 0;
+      const customerCount = customersPayload.data.length;
+
+      if (dashboardRevenue) dashboardRevenue.textContent = formatPeso(revenue);
+      if (dashboardOrders) dashboardOrders.textContent = String(orderCount);
+      if (dashboardAov) dashboardAov.textContent = formatPeso(aov);
+      if (dashboardCustomers) dashboardCustomers.textContent = String(customerCount);
+    } catch (err) {
+      // Keep static defaults when APIs are unavailable.
+    }
+  };
+
+  const loadDashboardTables = async () => {
+    if (!dashboardLowStockBody && !dashboardRecentOrdersBody) return;
+    try {
+      const [productsRes, ordersRes] = await Promise.all([
+        fetch(API_PRODUCTS),
+        fetch(API_ORDERS)
+      ]);
+      if (!productsRes.ok || !ordersRes.ok) return;
+      const [productsPayload, ordersPayload] = await Promise.all([
+        productsRes.json(),
+        ordersRes.json()
+      ]);
+      if (!productsPayload.ok || !Array.isArray(productsPayload.data) || !ordersPayload.ok || !Array.isArray(ordersPayload.data)) {
+        return;
+      }
+
+      if (dashboardLowStockBody) {
+        const lowStock = productsPayload.data
+          .filter((item) => Number(item.stock || 0) <= 7)
+          .sort((a, b) => Number(a.stock || 0) - Number(b.stock || 0))
+          .slice(0, 5);
+        if (lowStock.length) {
+          dashboardLowStockBody.innerHTML = lowStock.map((item) => (
+            `<tr><td>${item.name}</td><td>${Number(item.stock || 0)} left</td></tr>`
+          )).join('');
+        }
+      }
+
+      if (dashboardRecentOrdersBody) {
+        const recent = ordersPayload.data.slice(0, 5);
+        if (recent.length) {
+          dashboardRecentOrdersBody.innerHTML = recent.map((item) => {
+            const date = new Date(item.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
+            const customerName = item.customer_name || item.customer_email || 'Guest Customer';
+            return `<tr>
+              <td>#${item.order_code}</td>
+              <td>${customerName}</td>
+              <td>${formatPeso(item.total)}</td>
+              <td><span class="chip ${statusClassForOrder(item.status)}">${item.status}</span></td>
+              <td>${date}</td>
+            </tr>`;
+          }).join('');
+        }
+      }
+    } catch (err) {
+      // Keep static fallback tables.
+    }
+  };
+
+  const openConfirmModal = (message, action) => {
+    if (!confirmActionModal || !confirmActionMessage || !confirmActionOk) return;
+    pendingConfirmAction = action;
+    confirmActionMessage.textContent = message;
+    confirmActionModal.classList.add('open');
+  };
+
+  const uploadProductImage = async (file) => {
+    if (!file) return null;
+    const formData = new FormData();
+    formData.append('image', file);
+    const res = await fetch(API_UPLOAD_PRODUCT_IMAGE, {
+      method: 'POST',
+      body: formData
+    });
+    const payload = await res.json();
+    if (!res.ok || !payload.ok || !payload.data?.image_path) {
+      throw new Error(payload.message || 'Failed to upload image.');
+    }
+    return payload.data.image_path;
+  };
+
+  const bindImagePreview = (inputEl, previewEl) => {
+    if (!inputEl || !previewEl) return;
+    inputEl.addEventListener('change', () => {
+      const file = inputEl.files && inputEl.files[0];
+      if (!file) {
+        previewEl.style.display = 'none';
+        previewEl.removeAttribute('src');
+        return;
+      }
+      const objectUrl = URL.createObjectURL(file);
+      previewEl.src = objectUrl;
+      previewEl.style.display = 'block';
+    });
+  };
+
+  bindImagePreview(newProductImage, newProductImagePreview);
+  bindImagePreview(editProductImage, editProductImagePreview);
+
+  const closeConfirmModal = () => {
+    if (!confirmActionModal) return;
+    confirmActionModal.classList.remove('open');
+    pendingConfirmAction = null;
+  };
+
+  if (confirmActionCancel) confirmActionCancel.addEventListener('click', closeConfirmModal);
+  if (confirmActionModal) {
+    confirmActionModal.addEventListener('click', (e) => {
+      if (e.target === confirmActionModal) closeConfirmModal();
+    });
+  }
+  if (confirmActionOk) {
+    confirmActionOk.addEventListener('click', async () => {
+      if (typeof pendingConfirmAction === 'function') {
+        const fn = pendingConfirmAction;
+        closeConfirmModal();
+        await fn();
+      }
+    });
+  }
+
+  if (modal && openBtn && form && tableBody) {
+    const closeModal = () => modal.classList.remove('open');
+    const openModal = () => modal.classList.add('open');
+
+    openBtn.addEventListener('click', openModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const nameInput = document.getElementById('newProductName');
+      const categoryInput = document.getElementById('newProductCategory');
+      const priceInput = document.getElementById('newProductPrice');
+      const stockInput = document.getElementById('newProductStock');
+
+      const name = (nameInput?.value || '').trim();
+      const category = categoryInput?.value || 'Handcrafted Bags';
+      const price = Number(priceInput?.value || 0);
+      const stock = Number(stockInput?.value || 0);
+
+      if (!name || price <= 0 || stock < 0) return;
+
+      const payload = {
+        name,
+        category,
+        price,
+        stock,
+        image_path: ''
+      };
+      openConfirmModal('Are you sure you want to save this new product?', async () => {
+        if (addProductFeedback) {
+          addProductFeedback.textContent = 'Saving product...';
+          addProductFeedback.style.color = '#666';
+        }
+        try {
+          const selectedImage = newProductImage && newProductImage.files ? newProductImage.files[0] : null;
+          if (selectedImage) {
+            payload.image_path = await uploadProductImage(selectedImage);
+          }
+          const res = await fetch(API_PRODUCTS, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+
+          if (!res.ok || !data.ok || !data.data) {
+            throw new Error(data.message || 'API create failed');
+          }
+
+          productsCache.unshift(data.data);
+          tableBody.prepend(renderRow(data.data));
+          form.reset();
+          if (newProductImagePreview) {
+            newProductImagePreview.style.display = 'none';
+            newProductImagePreview.removeAttribute('src');
+          }
+          closeModal();
+          if (addProductFeedback) addProductFeedback.textContent = '';
+        } catch (err) {
+          if (addProductFeedback) {
+            addProductFeedback.textContent = err.message || 'Unable to save product.';
+            addProductFeedback.style.color = '#c0392b';
+          }
+        }
+      });
+    });
+  }
+
+  const closeEditModal = () => {
+    if (!editProductModal) return;
+    editProductModal.classList.remove('open');
+    if (editProductFeedback) editProductFeedback.textContent = '';
+  };
+
+  if (closeEditProductModal) closeEditProductModal.addEventListener('click', closeEditModal);
+  if (cancelEditProduct) cancelEditProduct.addEventListener('click', closeEditModal);
+  if (editProductModal) {
+    editProductModal.addEventListener('click', (e) => {
+      if (e.target === editProductModal) closeEditModal();
+    });
+  }
+
+  if (tableBody) {
+    tableBody.addEventListener('click', (event) => {
+      const target = event.target.closest('button');
+      if (!target) return;
+
+      if (target.classList.contains('product-edit-btn')) {
+        const id = Number(target.getAttribute('data-id') || 0);
+        const product = productsCache.find((item) => Number(item.id) === id);
+        if (!product || !editProductModal) return;
+        document.getElementById('editProductId').value = String(product.id);
+        document.getElementById('editProductName').value = product.name || '';
+        document.getElementById('editProductCategory').value = product.category || 'Handcrafted Bags';
+        document.getElementById('editProductPrice').value = String(Number(product.price || 0));
+        document.getElementById('editProductStock').value = String(Number(product.stock || 0));
+        if (editProductImagePath) editProductImagePath.value = product.image_path || '';
+        if (editProductImagePreview) {
+          if (product.image_path) {
+            editProductImagePreview.src = product.image_path;
+            editProductImagePreview.style.display = 'block';
+          } else {
+            editProductImagePreview.style.display = 'none';
+            editProductImagePreview.removeAttribute('src');
+          }
+        }
+        if (editProductImage) editProductImage.value = '';
+        editProductModal.classList.add('open');
+      }
+
+      if (target.classList.contains('product-delete-btn')) {
+        const id = Number(target.getAttribute('data-id') || 0);
+        const name = target.getAttribute('data-name') || 'this product';
+        if (id <= 0) return;
+        openConfirmModal(`Are you sure you want to delete "${name}"?`, async () => {
+          try {
+            const res = await fetch(`${API_PRODUCTS}?id=${id}`, { method: 'DELETE' });
+            const payload = await res.json();
+            if (!res.ok || !payload.ok) {
+              throw new Error(payload.message || 'Failed to delete product.');
+            }
+            productsCache = productsCache.filter((item) => Number(item.id) !== id);
+            await loadProducts();
+          } catch (err) {
+            alert(err.message || 'Unable to delete product.');
+          }
+        });
+      }
+    });
+  }
+
+  if (editProductForm) {
+    editProductForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const payload = {
+        id: Number(document.getElementById('editProductId').value || 0),
+        name: document.getElementById('editProductName').value.trim(),
+        category: document.getElementById('editProductCategory').value,
+        price: Number(document.getElementById('editProductPrice').value || 0),
+        stock: Number(document.getElementById('editProductStock').value || 0),
+        image_path: editProductImagePath ? editProductImagePath.value : ''
+      };
+      if (!payload.id || !payload.name || payload.price <= 0 || payload.stock < 0) return;
+
+      openConfirmModal('Are you sure you want to save these product changes?', async () => {
+        if (editProductFeedback) {
+          editProductFeedback.textContent = 'Saving changes...';
+          editProductFeedback.style.color = '#666';
+        }
+        try {
+          const selectedImage = editProductImage && editProductImage.files ? editProductImage.files[0] : null;
+          if (selectedImage) {
+            payload.image_path = await uploadProductImage(selectedImage);
+          }
+          const res = await fetch(API_PRODUCTS, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (!res.ok || !data.ok || !data.data) {
+            throw new Error(data.message || 'Failed to update product.');
+          }
+          const idx = productsCache.findIndex((item) => Number(item.id) === Number(data.data.id));
+          if (idx >= 0) productsCache[idx] = data.data;
+          closeEditModal();
+          await loadProducts();
+        } catch (err) {
+          if (editProductFeedback) {
+            editProductFeedback.textContent = err.message || 'Unable to save changes.';
+            editProductFeedback.style.color = '#c0392b';
+          }
+        }
+      });
+    });
+  }
+
+  if (addUserModal && openAddUserModal && addUserForm && usersTableBody) {
+    const closeModal = () => {
+      addUserModal.classList.remove('open');
+      if (addUserFeedback) addUserFeedback.textContent = '';
+    };
+    const openModal = () => addUserModal.classList.add('open');
+    openAddUserModal.addEventListener('click', openModal);
+    if (closeAddUserModal) closeAddUserModal.addEventListener('click', closeModal);
+    if (cancelAddUser) cancelAddUser.addEventListener('click', closeModal);
+    addUserModal.addEventListener('click', (e) => {
+      if (e.target === addUserModal) closeModal();
+    });
+
+    addUserForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const firstName = document.getElementById('newUserFirstName')?.value.trim() || '';
+      const lastName = document.getElementById('newUserLastName')?.value.trim() || '';
+      const email = document.getElementById('newUserEmail')?.value.trim() || '';
+      const password = document.getElementById('newUserPassword')?.value || '';
+      const role = document.getElementById('newUserRole')?.value || 'customer';
+
+      if (addUserFeedback) {
+        addUserFeedback.textContent = 'Creating user...';
+        addUserFeedback.style.color = '#666';
+      }
+
+      try {
+        const response = await fetch(API_USERS, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            first_name: firstName,
+            last_name: lastName,
+            email,
+            password,
+            role
+          })
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.ok || !payload.data) {
+          throw new Error(payload.message || 'Failed to create user.');
+        }
+
+        usersTableBody.prepend(renderUserRow(payload.data));
+        addUserForm.reset();
+        closeModal();
+      } catch (err) {
+        if (addUserFeedback) {
+          addUserFeedback.textContent = err.message || 'Unable to create user right now.';
+          addUserFeedback.style.color = '#c0392b';
+        }
+      }
+    });
+  }
+
+  loadProducts();
+  loadOrders();
+  loadCustomers();
+  loadUsers();
+  loadDashboardStats();
+  loadDashboardTables();
+});
