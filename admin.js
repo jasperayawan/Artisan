@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const API_USERS = 'api/users.php';
   const API_UPLOAD_PRODUCT_IMAGE = 'api/upload-product-image.php';
   const API_SALES_TREND = 'api/sales-trend.php';
+  const API_CONTACT_MESSAGES = 'api/contact-messages.php';
   const paginationState = {};
 
   const modal = document.getElementById('addProductModal');
@@ -53,6 +54,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const dashboardLowStockBody = document.getElementById('dashboardLowStockBody');
   const dashboardRecentOrdersBody = document.getElementById('dashboardRecentOrdersBody');
   const dashboardSalesTrend = document.getElementById('dashboardSalesTrend');
+  const dashboardContactMessagesBody = document.getElementById('dashboardContactMessagesBody');
+  const dashboardNewMessages = document.getElementById('dashboardNewMessages');
+  const messagesTableBody = document.getElementById('messagesTableBody');
+  const messagesSearch = document.getElementById('messagesSearch');
   const usersTableBody = document.getElementById('usersTableBody');
   const addUserModal = document.getElementById('addUserModal');
   const openAddUserModal = document.getElementById('openAddUserModal');
@@ -77,6 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const confirmActionOk = document.getElementById('confirmActionOk');
   let pendingConfirmAction = null;
   let productsCache = [];
+  let contactMessagesCache = [];
 
   const ensurePaginationContainer = (tableBody) => {
     if (!tableBody) return null;
@@ -217,6 +223,24 @@ document.addEventListener('DOMContentLoaded', () => {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
 
+  const truncateText = (value, maxLen) => {
+    const t = String(value || '').replace(/\s+/g, ' ').trim();
+    if (t.length <= maxLen) return t;
+    return `${t.slice(0, maxLen)}…`;
+  };
+
+  const statusClassForContact = (status) => {
+    const s = String(status || '').toLowerCase();
+    if (s === 'read') return 'paid';
+    if (s === 'resolved') return 'delivered';
+    return 'pending';
+  };
+
+  const formatContactStatusLabel = (status) => {
+    const s = String(status || 'new');
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+
   const loadOrders = async () => {
     if (!ordersTableBody) return;
     try {
@@ -353,6 +377,98 @@ document.addEventListener('DOMContentLoaded', () => {
       // Keep static defaults when APIs are unavailable.
     }
   };
+
+  const loadDashboardContactMessages = async () => {
+    if (!dashboardContactMessagesBody && !dashboardNewMessages) return;
+    try {
+      const response = await fetch(`${API_CONTACT_MESSAGES}?limit=100`);
+      if (!response.ok) return;
+      const payload = await response.json();
+      if (!payload.ok || !Array.isArray(payload.data)) return;
+
+      const all = payload.data;
+      const newCount = all.filter((m) => String(m.status || '').toLowerCase() === 'new').length;
+      if (dashboardNewMessages) dashboardNewMessages.textContent = String(newCount);
+
+      if (!dashboardContactMessagesBody) return;
+      const recent = all.slice(0, 5);
+      if (!recent.length) {
+        dashboardContactMessagesBody.innerHTML = '<tr><td colspan="6" style="color:#7a746f;">No messages yet.</td></tr>';
+        return;
+      }
+      dashboardContactMessagesBody.innerHTML = recent.map((item) => {
+        const date = new Date(item.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
+        const subj = item.subject ? escapeHtml(item.subject) : '—';
+        return `<tr>
+          <td>${escapeHtml(item.name)}</td>
+          <td>${escapeHtml(item.email)}</td>
+          <td>${subj}</td>
+          <td>${escapeHtml(truncateText(item.message, 72))}</td>
+          <td><span class="chip ${statusClassForContact(item.status)}">${escapeHtml(formatContactStatusLabel(item.status))}</span></td>
+          <td>${date}</td>
+        </tr>`;
+      }).join('');
+    } catch (err) {
+      if (dashboardContactMessagesBody) {
+        dashboardContactMessagesBody.innerHTML = '<tr><td colspan="6" style="color:#c0392b;">Unable to load messages.</td></tr>';
+      }
+    }
+  };
+
+  const renderContactMessageRows = (items) => items.map((item) => {
+    const date = new Date(item.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
+    const subj = item.subject ? escapeHtml(item.subject) : '—';
+    return `<tr>
+      <td>${escapeHtml(item.name)}</td>
+      <td>${escapeHtml(item.email)}</td>
+      <td>${subj}</td>
+      <td style="max-width:340px;white-space:normal;">${escapeHtml(truncateText(item.message, 220))}</td>
+      <td><span class="chip ${statusClassForContact(item.status)}">${escapeHtml(formatContactStatusLabel(item.status))}</span></td>
+      <td>${date}</td>
+    </tr>`;
+  });
+
+  const applyContactMessagesFilter = () => {
+    if (!messagesTableBody) return;
+    const q = (messagesSearch?.value || '').trim().toLowerCase();
+    let items = contactMessagesCache;
+    if (q) {
+      items = items.filter((item) => {
+        const name = String(item.name || '').toLowerCase();
+        const email = String(item.email || '').toLowerCase();
+        const subj = String(item.subject || '').toLowerCase();
+        const msg = String(item.message || '').toLowerCase();
+        return name.includes(q) || email.includes(q) || subj.includes(q) || msg.includes(q);
+      });
+    }
+    const rows = renderContactMessageRows(items);
+    if (!rows.length) {
+      messagesTableBody.innerHTML = '<tr><td colspan="6" style="color:#7a746f;">No messages match your search.</td></tr>';
+      return;
+    }
+    setupPaginatedTable('contactMessages', messagesTableBody, rows, 8);
+  };
+
+  const loadContactMessages = async () => {
+    if (!messagesTableBody) return;
+    try {
+      const response = await fetch(`${API_CONTACT_MESSAGES}?limit=300`);
+      if (!response.ok) return;
+      const payload = await response.json();
+      if (!payload.ok || !Array.isArray(payload.data)) return;
+      contactMessagesCache = payload.data;
+      applyContactMessagesFilter();
+    } catch (err) {
+      messagesTableBody.innerHTML = '<tr><td colspan="6" style="color:#c0392b;">Unable to load messages.</td></tr>';
+    }
+  };
+
+  if (messagesSearch) {
+    messagesSearch.addEventListener('input', () => {
+      if (paginationState.contactMessages) paginationState.contactMessages.page = 1;
+      applyContactMessagesFilter();
+    });
+  }
 
   const loadDashboardSalesTrend = async () => {
     if (!dashboardSalesTrend) return;
@@ -774,7 +890,9 @@ document.addEventListener('DOMContentLoaded', () => {
   loadUsers();
   loadDashboardStats();
   loadDashboardSalesTrend();
+  loadDashboardContactMessages();
   loadDashboardTables();
+  loadContactMessages();
   bindPaginationEvents();
   initFallbackPagination();
 });

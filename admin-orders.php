@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Orders | Artisan</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600;700;800&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=5">
+  <link rel="stylesheet" href="admin.css?v=6">
 </head>
 <body>
   <div class="admin-layout">
@@ -16,6 +16,7 @@
         <a href="admin-dashboard.php">Dashboard</a>
         <a href="admin-products.php">Products</a>
         <a class="active" href="admin-orders.php">Orders</a>
+        <a href="admin-messages.php">Messages</a>
         <a href="admin-users.php">Users</a>
         <a href="admin-settings.php">Settings</a>
       </nav>
@@ -64,6 +65,6 @@
     </main>
   </div>
 
-  <script src="admin.js?v=5"></script>
+  <script src="admin.js?v=6"></script>
 </body>
 </html>

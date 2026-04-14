@@ -185,13 +185,14 @@
                 </div>
 
                 <form class="contact-form">
+                    <p id="contactFeedback" style="margin-bottom:12px; font-size:0.9rem; color:#fff; display:none;"></p>
                     <div class="form-group">
                         <label>Name:</label>
-                        <input type="text" name="name">
+                        <input type="text" name="name" required>
                     </div>
                     <div class="form-group">
                         <label>Email:</label>
-                        <input type="email" name="email">
+                        <input type="email" name="email" required>
                     </div>
                     <div class="form-group">
                         <label>Subject:</label>
@@ -199,7 +200,7 @@
                     </div>
                     <div class="form-group">
                         <label>Message:</label>
-                        <textarea name="message" rows="5"></textarea>
+                        <textarea name="message" rows="5" required></textarea>
                     </div>
                     <button type="submit" class="send-btn">SEND MESSAGE</button>
                 </form>
@@ -245,6 +246,63 @@
 
     <script>
         lucide.createIcons();
+    </script>
+    <script>
+        (function () {
+            const form = document.querySelector('.contact-form');
+            if (!form) return;
+            const feedback = document.getElementById('contactFeedback');
+            const btn = form.querySelector('button[type="submit"]');
+
+            const show = (message, type) => {
+                if (!feedback) return;
+                feedback.style.display = 'block';
+                feedback.textContent = message;
+                feedback.style.color = type === 'ok' ? '#b7f7c2' : (type === 'warn' ? '#ffe8b2' : '#ffd0cc');
+            };
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!btn) return;
+
+                const fd = new FormData(form);
+                const payload = {
+                    name: String(fd.get('name') || '').trim(),
+                    email: String(fd.get('email') || '').trim(),
+                    subject: String(fd.get('subject') || '').trim(),
+                    message: String(fd.get('message') || '').trim()
+                };
+
+                if (!payload.name || !payload.email || !payload.message) {
+                    show('Please fill in name, email, and message.', 'error');
+                    return;
+                }
+
+                btn.disabled = true;
+                const oldText = btn.textContent;
+                btn.textContent = 'SENDING...';
+                show('Sending your message...', 'warn');
+
+                try {
+                    const res = await fetch('api/contact.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok || !data.ok) {
+                        throw new Error(data.message || 'Unable to send message.');
+                    }
+                    form.reset();
+                    show('Message sent! We’ll get back to you soon.', 'ok');
+                } catch (err) {
+                    show(err.message || 'Unable to send message right now.', 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = oldText;
+                }
+            });
+        })();
     </script>
     <script src="auth-ui.js?v=2"></script>
 </body>

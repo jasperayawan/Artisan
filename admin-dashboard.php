@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard | Artisan</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600;700;800&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css?v=5">
+  <link rel="stylesheet" href="admin.css?v=6">
 </head>
 <body>
   <div class="admin-layout">
@@ -16,6 +16,7 @@
         <a class="active" href="admin-dashboard.php">Dashboard</a>
         <a href="admin-products.php">Products</a>
         <a href="admin-orders.php">Orders</a>
+        <a href="admin-messages.php">Messages</a>
         <a href="admin-users.php">Users</a>
         <a href="admin-settings.php">Settings</a>
       </nav>
@@ -39,6 +40,7 @@
         <article class="card"><p class="label">Orders</p><p class="value" id="dashboardOrders">0</p><p class="delta up">Live total orders</p></article>
         <article class="card"><p class="label">Avg. Order Value</p><p class="value" id="dashboardAov">₱0.00</p><p class="delta">Computed from API totals</p></article>
         <article class="card"><p class="label">Customers</p><p class="value" id="dashboardCustomers">0</p><p class="delta up">Unique purchasing customers</p></article>
+        <article class="card"><p class="label">New contact messages</p><p class="value" id="dashboardNewMessages">0</p><p class="delta up">Unread (new)</p></article>
       </section>
 
       <section class="dashboard-grid">
@@ -63,6 +65,21 @@
       </section>
 
       <section class="card" style="margin-top:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
+          <h2 class="section-title" style="margin-bottom:0;">Recent contact messages</h2>
+          <a class="btn btn-ghost" href="admin-messages.php" style="text-decoration:none;">View all</a>
+        </div>
+        <table>
+          <thead>
+            <tr><th>From</th><th>Email</th><th>Subject</th><th>Preview</th><th>Status</th><th>Date</th></tr>
+          </thead>
+          <tbody id="dashboardContactMessagesBody">
+            <tr><td colspan="6" style="color:#7a746f;">Loading...</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card" style="margin-top:14px;">
         <h2 class="section-title">Recent Orders</h2>
         <table>
           <thead>
@@ -79,6 +96,6 @@
     </main>
   </div>
 
-  <script src="admin.js?v=5"></script>
+  <script src="admin.js?v=6"></script>
 </body>
 </html>

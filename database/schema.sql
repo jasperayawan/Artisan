@@ -75,3 +75,15 @@ CREATE TABLE IF NOT EXISTS order_items (
   CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS contact_messages (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(180) NOT NULL,
+  email VARCHAR(190) NOT NULL,
+  subject VARCHAR(190) NULL,
+  message TEXT NOT NULL,
+  ip_address VARCHAR(45) NULL,
+  user_agent VARCHAR(255) NULL,
+  status ENUM('new', 'read', 'resolved') NOT NULL DEFAULT 'new',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
