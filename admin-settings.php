@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Settings | Artisan</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600;700;800&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="admin.css?v=5">
 </head>
 <body>
   <div class="admin-layout">
@@ -103,6 +103,6 @@
     </main>
   </div>
 
-  <script src="admin.js"></script>
+  <script src="admin.js?v=5"></script>
 </body>
 </html>

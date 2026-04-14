@@ -161,4 +161,46 @@ if ($method === 'POST') {
     }
 }
 
+if ($method === 'PUT') {
+    $body = read_json_body();
+    $id = (int)($body['id'] ?? 0);
+    $status = trim((string)($body['status'] ?? ''));
+    $allowedStatuses = ['Pending', 'Paid', 'Shipped', 'Delivered', 'Cancelled'];
+
+    if ($id <= 0 || $status === '') {
+        respond_json(422, ['ok' => false, 'message' => 'Order id and status are required.']);
+    }
+
+    if (!in_array($status, $allowedStatuses, true)) {
+        respond_json(422, ['ok' => false, 'message' => 'Invalid order status.']);
+    }
+
+    try {
+        $stmt = $pdo->prepare('UPDATE orders SET status = :status WHERE id = :id');
+        $stmt->execute([
+            ':id' => $id,
+            ':status' => $status,
+        ]);
+
+        if ($stmt->rowCount() === 0) {
+            $check = $pdo->prepare('SELECT id FROM orders WHERE id = :id LIMIT 1');
+            $check->execute([':id' => $id]);
+            if (!$check->fetch()) {
+                respond_json(404, ['ok' => false, 'message' => 'Order not found.']);
+            }
+        }
+
+        respond_json(200, [
+            'ok' => true,
+            'message' => 'Order status updated.',
+            'data' => [
+                'id' => $id,
+                'status' => $status,
+            ],
+        ]);
+    } catch (Throwable $e) {
+        respond_json(500, ['ok' => false, 'message' => 'Failed to update order status.']);
+    }
+}
+
 respond_json(405, ['ok' => false, 'message' => 'Method not allowed.']);

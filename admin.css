@@ -192,6 +192,61 @@ body {
   background: linear-gradient(180deg, #fff, #fdfbf8);
 }
 
+.sales-trend-chart {
+  min-height: 260px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.sales-trend-empty {
+  height: 260px;
+  border: 1px dashed #d6ccbe;
+  border-radius: 10px;
+  display: grid;
+  place-content: center;
+  color: #998f84;
+  font-size: 0.88rem;
+  background: linear-gradient(180deg, #fff, #fdfbf8);
+}
+
+.sales-bar-row {
+  display: grid;
+  gap: 6px;
+}
+
+.sales-bar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.sales-bar-name {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #3e352f;
+}
+
+.sales-bar-meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.sales-bar-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: #f1ece4;
+  overflow: hidden;
+}
+
+.sales-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #d9c5a3, #b58d4c);
+}
+
 .section-title {
   font-size: 1rem;
   font-weight: 700;
@@ -316,6 +371,26 @@ textarea { resize: vertical; min-height: 90px; }
 .modal-header h2 {
   font-family: "Playfair Display", serif;
   font-size: 1.35rem;
+}
+
+.table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.table-pagination .pagination-btn {
+  min-width: 78px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+
+.table-pagination .pagination-meta {
+  font-size: 0.82rem;
+  color: var(--muted);
 }
 
 @media (max-width: 1100px) {

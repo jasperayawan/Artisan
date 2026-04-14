@@ -35,6 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const API_CUSTOMERS = 'api/customers.php';
   const API_USERS = 'api/users.php';
   const API_UPLOAD_PRODUCT_IMAGE = 'api/upload-product-image.php';
+  const API_SALES_TREND = 'api/sales-trend.php';
+  const paginationState = {};
 
   const modal = document.getElementById('addProductModal');
   const openBtn = document.getElementById('openAddProductModal');
@@ -50,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const dashboardCustomers = document.getElementById('dashboardCustomers');
   const dashboardLowStockBody = document.getElementById('dashboardLowStockBody');
   const dashboardRecentOrdersBody = document.getElementById('dashboardRecentOrdersBody');
+  const dashboardSalesTrend = document.getElementById('dashboardSalesTrend');
   const usersTableBody = document.getElementById('usersTableBody');
   const addUserModal = document.getElementById('addUserModal');
   const openAddUserModal = document.getElementById('openAddUserModal');
@@ -74,6 +77,90 @@ document.addEventListener('DOMContentLoaded', () => {
   const confirmActionOk = document.getElementById('confirmActionOk');
   let pendingConfirmAction = null;
   let productsCache = [];
+
+  const ensurePaginationContainer = (tableBody) => {
+    if (!tableBody) return null;
+    const table = tableBody.closest('table');
+    if (!table || !table.parentElement) return null;
+    const parent = table.parentElement;
+    let container = parent.querySelector(`.table-pagination[data-for="${tableBody.id}"]`);
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'table-pagination';
+      container.setAttribute('data-for', tableBody.id || '');
+      table.insertAdjacentElement('afterend', container);
+    }
+    return container;
+  };
+
+  const renderPagination = (tableBody, pageKey, rows, pageSize = 6) => {
+    if (!tableBody) return;
+    const totalRows = rows.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+    if (!paginationState[pageKey]) paginationState[pageKey] = { page: 1 };
+    const currentPage = Math.min(totalPages, Math.max(1, Number(paginationState[pageKey].page || 1)));
+    paginationState[pageKey].page = currentPage;
+
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    tableBody.innerHTML = rows.slice(start, end).join('');
+
+    const container = ensurePaginationContainer(tableBody);
+    if (!container) return;
+
+    if (totalRows <= pageSize) {
+      container.innerHTML = '';
+      return;
+    }
+
+    container.innerHTML = `
+      <button class="btn btn-ghost pagination-btn" type="button" data-key="${pageKey}" data-dir="prev" ${currentPage <= 1 ? 'disabled' : ''}>Prev</button>
+      <span class="pagination-meta">Page ${currentPage} of ${totalPages}</span>
+      <button class="btn btn-ghost pagination-btn" type="button" data-key="${pageKey}" data-dir="next" ${currentPage >= totalPages ? 'disabled' : ''}>Next</button>
+    `;
+  };
+
+  const bindPaginationEvents = () => {
+    document.addEventListener('click', (event) => {
+      const target = event.target.closest('.pagination-btn');
+      if (!target) return;
+      const pageKey = target.getAttribute('data-key') || '';
+      const dir = target.getAttribute('data-dir') || '';
+      const state = paginationState[pageKey];
+      if (!state) return;
+      state.page = dir === 'next' ? Number(state.page || 1) + 1 : Number(state.page || 1) - 1;
+      if (typeof state.render === 'function') state.render();
+    });
+  };
+
+  const setupPaginatedTable = (pageKey, tableBody, rows, pageSize = 6) => {
+    paginationState[pageKey] = paginationState[pageKey] || { page: 1 };
+    paginationState[pageKey].rows = rows;
+    paginationState[pageKey].pageSize = pageSize;
+    paginationState[pageKey].tableBody = tableBody;
+    paginationState[pageKey].render = () => {
+      const state = paginationState[pageKey];
+      renderPagination(state.tableBody, pageKey, state.rows || [], state.pageSize || pageSize);
+    };
+    paginationState[pageKey].render();
+  };
+
+  const initFallbackPagination = () => {
+    const specs = [
+      { key: 'products', body: tableBody, size: 6 },
+      { key: 'orders', body: ordersTableBody, size: 6 },
+      { key: 'customers', body: customersTableBody, size: 6 },
+      { key: 'users', body: usersTableBody, size: 6 },
+      { key: 'dashboardLowStock', body: dashboardLowStockBody, size: 4 },
+      { key: 'dashboardRecentOrders', body: dashboardRecentOrdersBody, size: 4 }
+    ];
+    specs.forEach(({ key, body, size }) => {
+      if (!body) return;
+      const staticRows = Array.from(body.querySelectorAll('tr')).map((row) => row.outerHTML);
+      if (!staticRows.length) return;
+      setupPaginatedTable(key, body, staticRows, size);
+    });
+  };
 
   const statusForStock = (stock) => ({
     className: Number(stock) <= 7 ? 'pending' : 'paid',
@@ -107,8 +194,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const payload = await response.json();
       if (!payload.ok || !Array.isArray(payload.data)) return;
       productsCache = payload.data;
-      tableBody.innerHTML = '';
-      payload.data.forEach((item) => tableBody.appendChild(renderRow(item)));
+      const rows = payload.data.map((item) => renderRow(item).outerHTML);
+      setupPaginatedTable('products', tableBody, rows, 6);
     } catch (err) {
       // Keep current static rows as graceful fallback.
     }
@@ -123,6 +210,12 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const formatPeso = (value) => `₱${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const escapeHtml = (value) => String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 
   const loadOrders = async () => {
     if (!ordersTableBody) return;
@@ -131,23 +224,47 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!response.ok) return;
       const payload = await response.json();
       if (!payload.ok || !Array.isArray(payload.data)) return;
-      ordersTableBody.innerHTML = '';
-      payload.data.forEach((item) => {
-        const row = document.createElement('tr');
+      const rows = payload.data.map((item) => {
         const date = new Date(item.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
         const customerName = item.customer_name || item.customer_email || 'Guest Customer';
-        row.innerHTML = `
+        const currentStatus = String(item.status || 'Pending');
+        return `
           <td>#${item.order_code}</td>
           <td>${customerName}</td>
           <td>${Number(item.item_count || 0)}</td>
           <td>${formatPeso(item.total)}</td>
           <td><span class="chip ${statusClassForOrder(item.status)}">${item.status}</span></td>
           <td>${date}</td>
+          <td>
+            <select class="order-status-select" data-id="${Number(item.id || 0)}">
+              <option value="Pending" ${currentStatus === 'Pending' ? 'selected' : ''}>Pending</option>
+              <option value="Paid" ${currentStatus === 'Paid' ? 'selected' : ''}>Paid</option>
+              <option value="Shipped" ${currentStatus === 'Shipped' ? 'selected' : ''}>Shipped</option>
+              <option value="Delivered" ${currentStatus === 'Delivered' ? 'selected' : ''}>Delivered</option>
+              <option value="Cancelled" ${currentStatus === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+            </select>
+            <button class="btn btn-ghost order-status-update-btn" data-id="${Number(item.id || 0)}" type="button">Update</button>
+          </td>
         `;
-        ordersTableBody.appendChild(row);
-      });
+      }).map((cells) => `<tr>${cells}</tr>`);
+      setupPaginatedTable('orders', ordersTableBody, rows, 6);
     } catch (err) {
       // Keep static rows as fallback.
+    }
+  };
+
+  const updateOrderStatus = async (orderId, status) => {
+    const response = await fetch(API_ORDERS, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: orderId,
+        status
+      })
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.message || 'Failed to update order status.');
     }
   };
 
@@ -158,21 +275,19 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!response.ok) return;
       const payload = await response.json();
       if (!payload.ok || !Array.isArray(payload.data)) return;
-      customersTableBody.innerHTML = '';
-      payload.data.forEach((item) => {
-        const row = document.createElement('tr');
+      const rows = payload.data.map((item) => {
         const date = item.last_order
           ? new Date(item.last_order).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
           : 'N/A';
-        row.innerHTML = `
+        return `
           <td>${item.name || 'Guest Customer'}</td>
           <td>${item.email || 'N/A'}</td>
           <td>${Number(item.total_orders || 0)}</td>
           <td>${formatPeso(item.total_spent)}</td>
           <td>${date}</td>
         `;
-        customersTableBody.appendChild(row);
-      });
+      }).map((cells) => `<tr>${cells}</tr>`);
+      setupPaginatedTable('customers', customersTableBody, rows, 6);
     } catch (err) {
       // Keep static rows as fallback.
     }
@@ -202,8 +317,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!response.ok) return;
       const payload = await response.json();
       if (!payload.ok || !Array.isArray(payload.data)) return;
-      usersTableBody.innerHTML = '';
-      payload.data.forEach((user) => usersTableBody.appendChild(renderUserRow(user)));
+      const rows = payload.data.map((user) => renderUserRow(user).outerHTML);
+      setupPaginatedTable('users', usersTableBody, rows, 6);
     } catch (err) {
       // Keep static rows as fallback.
     }
@@ -239,6 +354,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  const loadDashboardSalesTrend = async () => {
+    if (!dashboardSalesTrend) return;
+    try {
+      const response = await fetch(API_SALES_TREND);
+      if (!response.ok) return;
+      const payload = await response.json();
+      if (!payload.ok || !Array.isArray(payload.data)) return;
+
+      const items = payload.data.filter((row) => Number(row.units_sold || 0) > 0);
+      if (!items.length) {
+        dashboardSalesTrend.innerHTML = '<p class="sales-trend-empty">No product sales yet.</p>';
+        return;
+      }
+
+      const maxUnits = Math.max(...items.map((item) => Number(item.units_sold || 0)), 1);
+      dashboardSalesTrend.innerHTML = items.map((item) => {
+        const units = Number(item.units_sold || 0);
+        const width = Math.max(8, Math.round((units / maxUnits) * 100));
+        return `
+          <div class="sales-bar-row">
+            <div class="sales-bar-head">
+              <span class="sales-bar-name">${escapeHtml(item.product_name)}</span>
+              <span class="sales-bar-meta">${units} sold • ${formatPeso(item.revenue || 0)}</span>
+            </div>
+            <div class="sales-bar-track">
+              <div class="sales-bar-fill" style="width:${width}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch (err) {
+      dashboardSalesTrend.innerHTML = '<p class="sales-trend-empty">Unable to load sales trend right now.</p>';
+    }
+  };
+
   const loadDashboardTables = async () => {
     if (!dashboardLowStockBody && !dashboardRecentOrdersBody) return;
     try {
@@ -261,16 +411,17 @@ document.addEventListener('DOMContentLoaded', () => {
           .sort((a, b) => Number(a.stock || 0) - Number(b.stock || 0))
           .slice(0, 5);
         if (lowStock.length) {
-          dashboardLowStockBody.innerHTML = lowStock.map((item) => (
+          const rows = lowStock.map((item) => (
             `<tr><td>${item.name}</td><td>${Number(item.stock || 0)} left</td></tr>`
-          )).join('');
+          ));
+          setupPaginatedTable('dashboardLowStock', dashboardLowStockBody, rows, 4);
         }
       }
 
       if (dashboardRecentOrdersBody) {
         const recent = ordersPayload.data.slice(0, 5);
         if (recent.length) {
-          dashboardRecentOrdersBody.innerHTML = recent.map((item) => {
+          const rows = recent.map((item) => {
             const date = new Date(item.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
             const customerName = item.customer_name || item.customer_email || 'Guest Customer';
             return `<tr>
@@ -280,7 +431,8 @@ document.addEventListener('DOMContentLoaded', () => {
               <td><span class="chip ${statusClassForOrder(item.status)}">${item.status}</span></td>
               <td>${date}</td>
             </tr>`;
-          }).join('');
+          });
+          setupPaginatedTable('dashboardRecentOrders', dashboardRecentOrdersBody, rows, 4);
         }
       }
     } catch (err) {
@@ -408,7 +560,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
 
           productsCache.unshift(data.data);
-          tableBody.prepend(renderRow(data.data));
+          await loadProducts();
           form.reset();
           if (newProductImagePreview) {
             newProductImagePreview.style.display = 'none';
@@ -485,6 +637,32 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(err.message || 'Unable to delete product.');
           }
         });
+      }
+    });
+  }
+
+  if (ordersTableBody) {
+    ordersTableBody.addEventListener('click', async (event) => {
+      const target = event.target.closest('button.order-status-update-btn');
+      if (!target) return;
+
+      const orderId = Number(target.getAttribute('data-id') || 0);
+      const select = ordersTableBody.querySelector(`select.order-status-select[data-id="${orderId}"]`);
+      const nextStatus = select ? String(select.value || '').trim() : '';
+      if (orderId <= 0 || !nextStatus) return;
+
+      const previousText = target.textContent;
+      target.disabled = true;
+      target.textContent = 'Saving...';
+
+      try {
+        await updateOrderStatus(orderId, nextStatus);
+        await loadOrders();
+      } catch (err) {
+        alert(err.message || 'Unable to update order status.');
+      } finally {
+        target.disabled = false;
+        target.textContent = previousText;
       }
     });
   }
@@ -578,7 +756,7 @@ document.addEventListener('DOMContentLoaded', () => {
           throw new Error(payload.message || 'Failed to create user.');
         }
 
-        usersTableBody.prepend(renderUserRow(payload.data));
+        await loadUsers();
         addUserForm.reset();
         closeModal();
       } catch (err) {
@@ -595,5 +773,8 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCustomers();
   loadUsers();
   loadDashboardStats();
+  loadDashboardSalesTrend();
   loadDashboardTables();
+  bindPaginationEvents();
+  initFallbackPagination();
 });

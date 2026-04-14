@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard | Artisan</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600;700;800&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="admin.css?v=5">
 </head>
 <body>
   <div class="admin-layout">
@@ -43,8 +43,10 @@
 
       <section class="dashboard-grid">
         <article class="card">
-          <h2 class="section-title">Sales Trend (Placeholder)</h2>
-          <div class="chart-placeholder">Chart visualization will be connected later.</div>
+          <h2 class="section-title">Sales Trend (Product Units Sold)</h2>
+          <div id="dashboardSalesTrend" class="sales-trend-chart">
+            <p class="sales-trend-empty">Loading product sales trend...</p>
+          </div>
         </article>
 
         <article class="card">
@@ -77,6 +79,6 @@
     </main>
   </div>
 
-  <script src="admin.js"></script>
+  <script src="admin.js?v=5"></script>
 </body>
 </html>

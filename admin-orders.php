@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Orders | Artisan</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600;700;800&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="admin.css?v=5">
 </head>
 <body>
   <div class="admin-layout">
@@ -51,19 +51,19 @@
 
         <table>
           <thead>
-            <tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th></tr>
+            <tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th><th>Action</th></tr>
           </thead>
           <tbody id="ordersTableBody">
-            <tr><td>#A-1101</td><td>Lea Alvarez</td><td>2</td><td>₱1,700</td><td><span class="chip pending">Pending</span></td><td>Apr 09, 2026</td></tr>
-            <tr><td>#A-1100</td><td>Paul Dizon</td><td>1</td><td>₱1,200</td><td><span class="chip paid">Paid</span></td><td>Apr 09, 2026</td></tr>
-            <tr><td>#A-1099</td><td>Kaye Flores</td><td>3</td><td>₱2,580</td><td><span class="chip shipped">Shipped</span></td><td>Apr 08, 2026</td></tr>
-            <tr><td>#A-1098</td><td>R. Santos</td><td>4</td><td>₱3,200</td><td><span class="chip delivered">Delivered</span></td><td>Apr 08, 2026</td></tr>
+            <tr><td>#A-1101</td><td>Lea Alvarez</td><td>2</td><td>₱1,700</td><td><span class="chip pending">Pending</span></td><td>Apr 09, 2026</td><td>—</td></tr>
+            <tr><td>#A-1100</td><td>Paul Dizon</td><td>1</td><td>₱1,200</td><td><span class="chip paid">Paid</span></td><td>Apr 09, 2026</td><td>—</td></tr>
+            <tr><td>#A-1099</td><td>Kaye Flores</td><td>3</td><td>₱2,580</td><td><span class="chip shipped">Shipped</span></td><td>Apr 08, 2026</td><td>—</td></tr>
+            <tr><td>#A-1098</td><td>R. Santos</td><td>4</td><td>₱3,200</td><td><span class="chip delivered">Delivered</span></td><td>Apr 08, 2026</td><td>—</td></tr>
           </tbody>
         </table>
       </section>
     </main>
   </div>
 
-  <script src="admin.js"></script>
+  <script src="admin.js?v=5"></script>
 </body>
 </html>
