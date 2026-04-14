@@ -119,7 +119,7 @@
         lucide.createIcons();
       });
     </script>
-    <script src="auth-ui.js"></script>
+    <script src="auth-ui.js?v=2"></script>
 
 </body>
 </html>

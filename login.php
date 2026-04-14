@@ -261,7 +261,7 @@
                     setTimeout(() => {
                         window.location.href = String(user.role || '').toLowerCase() === 'admin'
                             ? 'admin-dashboard.php'
-                            : 'index.php';
+                            : 'customer-dashboard.php';
                     }, 700);
                 } catch (error) {
                     loginFeedback.textContent = error.message || 'Unable to login right now.';
