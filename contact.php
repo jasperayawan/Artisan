@@ -160,21 +160,21 @@
                         <i data-lucide="mail"></i>
                         <div>
                             <span>EMAIL:</span>
-                            <p>Artisan@craftph.com</p>
+                            <p>Franconicelyjane@gmail.com</p>
                         </div>
                     </div>
                     <div class="info-item">
                         <i data-lucide="phone"></i>
                         <div>
                             <span>PHONE:</span>
-                            <p>+63 123 456 7890</p>
+                            <p>+639530712539</p>
                         </div>
                     </div>
                     <div class="info-item">
                         <i data-lucide="map-pin"></i>
                         <div>
                             <span>LOCATION:</span>
-                            <p>Mindanao, Philippines</p>
+                            <p>Pagadian, Zamboanga del Sur</p>
                         </div>
                     </div>
                     <div class="social-links">

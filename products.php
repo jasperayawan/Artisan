@@ -388,6 +388,19 @@
         let productCards = document.querySelectorAll('.product-card');
         const API_PRODUCTS = 'api/products.php';
         const productsStatus = document.getElementById('productsStatus');
+
+        function getAuthRaw(){
+            try{
+                const authRaw = localStorage.getItem('artisanAuthUser');
+                return authRaw ? JSON.parse(authRaw) : null
+            } catch(err){
+                console.error("Failed to parse auth user:", err);
+                return null;
+            }
+        }
+
+
+
         const categoryToKey = {
             'Handcrafted Bags': 'bags',
             'Traditional Fans': 'fan',
@@ -457,6 +470,7 @@
             productCards.forEach(card => {
                 card.style.cursor = 'pointer';
                 card.addEventListener('click', () => {
+
                     const name = card.getAttribute('data-name') || 'Handcrafted Item';
                     const price = card.getAttribute('data-price') || '0';
                     const img = card.getAttribute('data-img') || '';
@@ -475,6 +489,13 @@
                 if (btn) {
                     btn.addEventListener('click', (e) => {
                         e.stopPropagation();
+                        const user = getAuthRaw()
+                        
+                        if(!user || user?.role !== 'customer') {
+                            window.location.href = 'login.php'
+                            return;
+                        }
+                       
                         const name = card.getAttribute('data-name') || 'Handcrafted Item';
                         const price = parseFloat(card.getAttribute('data-price') || '0');
                         const img = card.getAttribute('data-img') || '';
