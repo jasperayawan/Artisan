@@ -5,6 +5,8 @@
 1. Open phpMyAdmin (`http://localhost/phpmyadmin`).
 2. Import `database/schema.sql`.
 
+For an existing installation, run `database/migrations/20261111_add_order_payment_receipt.sql` in phpMyAdmin before using GCash checkout.
+
 This creates:
 - database: `artisan_db`
 - tables: `products`, `users`, `orders`, `order_items`
@@ -25,8 +27,8 @@ Expected: JSON response with `ok: true` and data array.
 - `products.html` fetches products from `api/products.php` and renders cards.
 - `admin-products.html` fetches products from `api/products.php`.
 - Admin "Add Product" posts to `api/products.php` and inserts into DB.
-- `checkout.html` posts order payloads to `api/orders.php`.
-- `admin-orders.html` fetches order records from `api/orders.php`.
+- `checkout.php` posts orders and GCash receipts to `api/orders.php`.
+- `admin-orders.php` fetches order records and displays uploaded GCash receipts.
 - `admin-customers.html` fetches customer aggregates from `api/customers.php`.
 - `signup.html` posts registration to `api/register.php`.
 - `login.html` posts login to `api/login.php`.

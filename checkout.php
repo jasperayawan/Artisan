@@ -157,12 +157,6 @@
             font-weight: 500;
         }
 
-        .payment-option-icons {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-        }
-
         .card-badge {
             background: #f0f0f0;
             border-radius: 3px;
@@ -171,18 +165,21 @@
             font-weight: 700;
             color: #555;
         }
-        .card-badge.visa { background: #1a1f71; color: white; }
-        .card-badge.mc { background: #eb001b; color: white; }
 
-        .card-fields {
+        .gcash-fields {
             display: none;
             padding: 16px;
             border: 1px solid #eee;
             background: #f9f9f9;
             margin-top: -2px;
         }
-        .card-fields.active { display: block; }
-        .card-fields .form-grid { gap: 12px; }
+        .gcash-fields.active { display: block; }
+        .gcash-fields .form-grid { gap: 12px; }
+        .gcash-account {
+            margin: 0 0 16px;
+            font-size: 0.88rem;
+            line-height: 1.7;
+        }
 
         /* Place Order */
         .place-order-btn {
@@ -402,41 +399,28 @@
             <div class="form-section">
                 <h2 class="form-section-title">Payment Method</h2>
                 <div class="payment-options">
-                    <label class="payment-option selected" id="opt-card">
-                        <input type="radio" name="payment" value="card" checked onchange="showCardFields(true)">
-                        <span class="payment-option-label">Credit / Debit Card</span>
-                        <div class="payment-option-icons">
-                            <span class="card-badge visa">VISA</span>
-                            <span class="card-badge mc">MC</span>
-                        </div>
-                    </label>
                     <label class="payment-option" id="opt-gcash">
-                        <input type="radio" name="payment" value="gcash" onchange="showCardFields(false)">
+                        <input type="radio" name="payment" value="gcash" onchange="showPaymentFields()">
                         <span class="payment-option-label">GCash</span>
                         <span class="card-badge" style="background:#0e7ef1;color:white;">G</span>
                     </label>
-                    <label class="payment-option" id="opt-cod">
-                        <input type="radio" name="payment" value="cod" onchange="showCardFields(false)">
+                    <label class="payment-option selected" id="opt-cod">
+                        <input type="radio" name="payment" value="cod" checked onchange="showPaymentFields()">
                         <span class="payment-option-label">Cash on Delivery</span>
                         <i data-lucide="banknote" style="width:18px;height:18px;color:#999;"></i>
                     </label>
                 </div>
 
-                <div class="card-fields active" id="cardFields">
+                <div class="gcash-fields" id="gcashFields">
+                    <p class="gcash-account">
+                        Send payment to:<br>
+                        <strong>Nicely Jane Franco Jornadal</strong><br>
+                        GCash number: <strong>09761766831</strong>
+                    </p>
                     <div class="form-grid full">
                         <div class="form-field">
-                            <label>Card Number</label>
-                            <input type="text" placeholder="0000 0000 0000 0000" maxlength="19">
-                        </div>
-                    </div>
-                    <div class="form-grid">
-                        <div class="form-field">
-                            <label>Expiry Date</label>
-                            <input type="text" placeholder="MM / YY" maxlength="7">
-                        </div>
-                        <div class="form-field">
-                            <label>CVV</label>
-                            <input type="text" placeholder="•••" maxlength="4">
+                            <label for="gcashReceipt">Upload GCash Receipt</label>
+                            <input id="gcashReceipt" type="file" accept="image/jpeg,image/png,image/webp">
                         </div>
                     </div>
                 </div>
@@ -556,8 +540,12 @@
 
     <script src="components.js"></script>
     <script>
-        function showCardFields(show) {
-            document.getElementById('cardFields').classList.toggle('active', show);
+        function showPaymentFields() {
+            const gcashSelected = document.querySelector('input[name="payment"]:checked')?.value === 'gcash';
+            const gcashFields = document.getElementById('gcashFields');
+            const gcashReceipt = document.getElementById('gcashReceipt');
+            gcashFields.classList.toggle('active', gcashSelected);
+            gcashReceipt.required = gcashSelected;
             document.querySelectorAll('.payment-option').forEach(o => o.classList.remove('selected'));
             const checked = document.querySelector('input[name="payment"]:checked');
             if (checked) checked.closest('.payment-option').classList.add('selected');
@@ -649,10 +637,18 @@
 
         if (placeOrderBtn && checkoutFeedback) {
             placeOrderBtn.addEventListener('click', async () => {
+                const selectedPayment = document.querySelector('input[name="payment"]:checked');
+                const gcashReceipt = getField('gcashReceipt')?.files?.[0];
+                if (selectedPayment?.value === 'gcash' && !gcashReceipt) {
+                    checkoutFeedback.textContent = 'Please upload your GCash receipt before placing your order.';
+                    checkoutFeedback.style.color = '#c0392b';
+                    getField('gcashReceipt')?.focus();
+                    return;
+                }
+
                 checkoutFeedback.textContent = 'Placing your order...';
                 checkoutFeedback.style.color = '#666';
 
-                const selectedPayment = document.querySelector('input[name="payment"]:checked');
                 const payload = {
                     first_name: getField('checkoutFirstName')?.value.trim() || '',
                     last_name: getField('checkoutLastName')?.value.trim() || '',
@@ -669,10 +665,14 @@
                 };
 
                 try {
+                    const formData = new FormData();
+                    formData.append('order', JSON.stringify(payload));
+                    if (selectedPayment?.value === 'gcash' && gcashReceipt) {
+                        formData.append('gcash_receipt', gcashReceipt);
+                    }
                     const response = await fetch('api/orders.php', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        body: formData
                     });
                     const result = await response.json();
                     if (!response.ok || !result.ok || !result.data) {

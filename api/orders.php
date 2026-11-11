@@ -49,7 +49,7 @@ $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
 if ($method === 'GET') {
     try {
-        $sql = 'SELECT o.id, o.order_code, o.customer_name, o.customer_email, o.status, o.total, o.created_at,
+        $sql = 'SELECT o.id, o.order_code, o.customer_name, o.customer_email, o.payment_method, o.payment_receipt, o.status, o.total, o.created_at,
                        COALESCE(SUM(oi.quantity), 0) AS item_count
                 FROM orders o
                 LEFT JOIN order_items oi ON oi.order_id = o.id
@@ -63,7 +63,16 @@ if ($method === 'GET') {
 }
 
 if ($method === 'POST') {
-    $body = read_json_body();
+    $body = [];
+    if (isset($_POST['order']) && is_string($_POST['order'])) {
+        $decoded = json_decode($_POST['order'], true);
+        if (!is_array($decoded)) {
+            respond_json(400, ['ok' => false, 'message' => 'Invalid order data.']);
+        }
+        $body = $decoded;
+    } else {
+        $body = read_json_body();
+    }
 
     $firstName = trim((string)($body['first_name'] ?? ''));
     $lastName = trim((string)($body['last_name'] ?? ''));
@@ -74,7 +83,7 @@ if ($method === 'POST') {
     $province = trim((string)($body['province'] ?? ''));
     $region = trim((string)($body['region'] ?? ''));
     $zipCode = trim((string)($body['zip_code'] ?? ''));
-    $paymentMethod = trim((string)($body['payment_method'] ?? 'cod'));
+    $paymentMethod = strtolower(trim((string)($body['payment_method'] ?? 'cod')));
     $shippingFee = (float)($body['shipping_fee'] ?? 150);
     $discount = (float)($body['discount'] ?? 0);
     $items = parse_items(is_array($body['items'] ?? null) ? $body['items'] : []);
@@ -87,6 +96,49 @@ if ($method === 'POST') {
     }
     if (!$items) {
         respond_json(422, ['ok' => false, 'message' => 'Cannot place an order with no items.']);
+    }
+    if (!in_array($paymentMethod, ['gcash', 'cod'], true)) {
+        respond_json(422, ['ok' => false, 'message' => 'Please select a valid payment method.']);
+    }
+
+    $receiptPath = null;
+    $savedReceiptPath = null;
+    if ($paymentMethod === 'gcash') {
+        $receipt = $_FILES['gcash_receipt'] ?? null;
+        if (!is_array($receipt) || ($receipt['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            respond_json(422, ['ok' => false, 'message' => 'A GCash receipt is required.']);
+        }
+
+        $tmpPath = (string)($receipt['tmp_name'] ?? '');
+        if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+            respond_json(422, ['ok' => false, 'message' => 'Invalid GCash receipt upload.']);
+        }
+
+        if ((int)($receipt['size'] ?? 0) > 5 * 1024 * 1024) {
+            respond_json(422, ['ok' => false, 'message' => 'The GCash receipt must be 5 MB or smaller.']);
+        }
+
+        $allowedReceiptTypes = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+        ];
+        $mime = (string)(mime_content_type($tmpPath) ?: '');
+        if (!isset($allowedReceiptTypes[$mime])) {
+            respond_json(422, ['ok' => false, 'message' => 'The GCash receipt must be a JPG, PNG, or WEBP image.']);
+        }
+
+        $uploadDir = dirname(__DIR__) . '/assets/uploads';
+        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0777, true) && !is_dir($uploadDir)) {
+            respond_json(500, ['ok' => false, 'message' => 'Failed to prepare receipt upload directory.']);
+        }
+
+        $filename = 'gcash-receipt-' . date('Ymd-His') . '-' . bin2hex(random_bytes(4)) . '.' . $allowedReceiptTypes[$mime];
+        $savedReceiptPath = $uploadDir . '/' . $filename;
+        if (!move_uploaded_file($tmpPath, $savedReceiptPath)) {
+            respond_json(500, ['ok' => false, 'message' => 'Failed to save GCash receipt.']);
+        }
+        $receiptPath = 'assets/uploads/' . $filename;
     }
 
     $subtotal = 0.0;
@@ -102,9 +154,9 @@ if ($method === 'POST') {
 
         $orderStmt = $pdo->prepare(
             'INSERT INTO orders
-                (order_code, customer_name, customer_email, customer_phone, street_address, city, province, region, zip_code, payment_method, status, subtotal, shipping_fee, discount, total)
+                (order_code, customer_name, customer_email, customer_phone, street_address, city, province, region, zip_code, payment_method, payment_receipt, status, subtotal, shipping_fee, discount, total)
              VALUES
-                (:order_code, :customer_name, :customer_email, :customer_phone, :street_address, :city, :province, :region, :zip_code, :payment_method, :status, :subtotal, :shipping_fee, :discount, :total)'
+                (:order_code, :customer_name, :customer_email, :customer_phone, :street_address, :city, :province, :region, :zip_code, :payment_method, :payment_receipt, :status, :subtotal, :shipping_fee, :discount, :total)'
         );
         $orderStmt->execute([
             ':order_code' => $orderCode,
@@ -117,6 +169,7 @@ if ($method === 'POST') {
             ':region' => $region,
             ':zip_code' => $zipCode,
             ':payment_method' => $paymentMethod,
+            ':payment_receipt' => $receiptPath,
             ':status' => 'Pending',
             ':subtotal' => $subtotal,
             ':shipping_fee' => $shippingFee,
@@ -148,6 +201,8 @@ if ($method === 'POST') {
                 'order_code' => $orderCode,
                 'customer_name' => $fullName,
                 'customer_email' => $customerEmail,
+                'payment_method' => $paymentMethod,
+                'payment_receipt' => $receiptPath,
                 'status' => 'Pending',
                 'item_count' => array_sum(array_map(static fn(array $item): int => (int)$item['qty'], $items)),
                 'total' => $total,
@@ -156,6 +211,9 @@ if ($method === 'POST') {
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
+        }
+        if ($savedReceiptPath !== null && is_file($savedReceiptPath)) {
+            unlink($savedReceiptPath);
         }
         respond_json(500, ['ok' => false, 'message' => 'Failed to place order.']);
     }

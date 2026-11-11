@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const authRaw = localStorage.getItem('artisanAuthUser');
   let authUser = null;
+
   try {
     authUser = authRaw ? JSON.parse(authRaw) : null;
   } catch (err) {
@@ -29,6 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
       day: 'numeric'
     });
   }
+
+
 
   const API_PRODUCTS = 'api/products.php';
   const API_ORDERS = 'api/orders.php';
@@ -83,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let pendingConfirmAction = null;
   let productsCache = [];
   let contactMessagesCache = [];
+
 
   const ensurePaginationContainer = (tableBody) => {
     if (!tableBody) return null;
@@ -207,6 +211,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+
+
+
   const statusClassForOrder = (status) => {
     const normalized = String(status || '').toLowerCase();
     if (normalized === 'paid') return 'paid';
@@ -252,13 +259,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const date = new Date(item.created_at).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
         const customerName = item.customer_name || item.customer_email || 'Guest Customer';
         const currentStatus = String(item.status || 'Pending');
+        const paymentMethod = escapeHtml(String(item.payment_method || 'N/A').toUpperCase());
+        const receipt = item.payment_receipt
+          ? `<a href="${escapeHtml(item.payment_receipt)}" target="_blank" rel="noopener noreferrer" aria-label="View GCash receipt for order ${escapeHtml(item.order_code)}"><img src="${escapeHtml(item.payment_receipt)}" alt="GCash receipt" style="display:block;width:52px;height:52px;object-fit:cover;border:1px solid #ece7df;border-radius:6px;margin-top:5px;"></a>`
+          : '—';
         return `
-          <td>#${item.order_code}</td>
-          <td>${customerName}</td>
+          <td>#${escapeHtml(item.order_code)}</td>
+          <td>${escapeHtml(customerName)}</td>
           <td>${Number(item.item_count || 0)}</td>
           <td>${formatPeso(item.total)}</td>
-          <td><span class="chip ${statusClassForOrder(item.status)}">${item.status}</span></td>
+          <td><span class="chip ${statusClassForOrder(item.status)}">${escapeHtml(item.status)}</span></td>
           <td>${date}</td>
+          <td>${paymentMethod}<br>${receipt}</td>
           <td>
             <select class="order-status-select" data-id="${Number(item.id || 0)}">
               <option value="Pending" ${currentStatus === 'Pending' ? 'selected' : ''}>Pending</option>
@@ -884,6 +896,45 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const searchInput = document.getElementById('inputSearch');
+  const categoryFilter = document.getElementById('categoryFilter');
+
+  async function filterProducts() {
+    await loadProducts();
+
+    const searchItem = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const selectedCategory = categoryFilter ? categoryFilter.value : 'all';
+
+    const filteredProducts = productsCache.filter((product) => {
+      const productName = (product.name || '').toLowerCase();
+      const productCategory = (product.catergory || '').toLowerCase();
+
+      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+
+      const matchesSearch =
+        product.name.toLowerCase().includes(searchItem) ||
+        product.category.toLowerCase().includes(searchItem);
+
+      return matchesCategory && matchesSearch
+    })
+
+    // 2. Map filtered products into HTML rows
+    const rows = filteredProducts.map((item) => renderRow(item).outerHTML);
+
+    // 3. Reset pagination back to Page 1 when search/filter changes
+    if (paginationState['products']) {
+      paginationState['products'].page = 1;
+    }
+
+    // 4. Update the paginated table with the filtered rows
+    setupPaginatedTable('products', tableBody, rows, 6);
+  }
+
+  searchInput?.addEventListener('input', filterProducts);
+  categoryFilter?.addEventListener('change', filterProducts);
+
+
+
   loadProducts();
   loadOrders();
   loadCustomers();
@@ -895,4 +946,5 @@ document.addEventListener('DOMContentLoaded', () => {
   loadContactMessages();
   bindPaginationEvents();
   initFallbackPagination();
+  filterProducts();
 });

@@ -37,13 +37,13 @@
       <section class="card">
         <div class="toolbar">
           <div class="left">
-            <input type="text" placeholder="Search products">
-            <select>
-              <option>All Categories</option>
-              <option>Handcrafted Bags</option>
-              <option>Traditional Fans</option>
-              <option>Artisan Bracelets</option>
-              <option>Native Sandals</option>
+            <input type="text" id="inputSearch" placeholder="Search products">
+            <select id="categoryFilter">
+              <option value="all">All Categories</option>
+              <option value="Handcrafted Bags">Handcrafted Bags</option>
+              <option value="Traditional Fans">Traditional Fans</option>
+              <option value="Artisan Bracelet">Artisan Bracelets</option>
+              <option value="Native Sandals">Native Sandals</option>
             </select>
           </div>
           <div class="right">
@@ -57,10 +57,6 @@
             <tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr>
           </thead>
           <tbody id="productsTableBody">
-            <tr><td>Native Handbag</td><td>Handcrafted Bags</td><td>₱1,200</td><td>12</td><td><span class="chip paid">Active</span></td><td>Edit | Delete</td></tr>
-            <tr><td>Crimson Weave Fan</td><td>Traditional Fans</td><td>₱450</td><td>7</td><td><span class="chip pending">Low stock</span></td><td>Edit | Delete</td></tr>
-            <tr><td>Patterned Bangle</td><td>Artisan Bracelets</td><td>₱250</td><td>5</td><td><span class="chip pending">Low stock</span></td><td>Edit | Delete</td></tr>
-            <tr><td>Natural Fiber Slides</td><td>Native Sandals</td><td>₱950</td><td>15</td><td><span class="chip paid">Active</span></td><td>Edit | Delete</td></tr>
           </tbody>
         </table>
       </section>
@@ -170,6 +166,6 @@
     </div>
   </div>
 
-  <script src="admin.js?v=6"></script>
+  <script src="admin.js?v=7"></script>
 </body>
 </html>

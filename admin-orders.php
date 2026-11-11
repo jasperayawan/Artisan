@@ -52,13 +52,13 @@
 
         <table>
           <thead>
-            <tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th><th>Action</th></tr>
+            <tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th><th>Payment / Receipt</th><th>Action</th></tr>
           </thead>
           <tbody id="ordersTableBody">
-            <tr><td>#A-1101</td><td>Lea Alvarez</td><td>2</td><td>₱1,700</td><td><span class="chip pending">Pending</span></td><td>Apr 09, 2026</td><td>—</td></tr>
-            <tr><td>#A-1100</td><td>Paul Dizon</td><td>1</td><td>₱1,200</td><td><span class="chip paid">Paid</span></td><td>Apr 09, 2026</td><td>—</td></tr>
-            <tr><td>#A-1099</td><td>Kaye Flores</td><td>3</td><td>₱2,580</td><td><span class="chip shipped">Shipped</span></td><td>Apr 08, 2026</td><td>—</td></tr>
-            <tr><td>#A-1098</td><td>R. Santos</td><td>4</td><td>₱3,200</td><td><span class="chip delivered">Delivered</span></td><td>Apr 08, 2026</td><td>—</td></tr>
+            <tr><td>#A-1101</td><td>Lea Alvarez</td><td>2</td><td>₱1,700</td><td><span class="chip pending">Pending</span></td><td>Apr 09, 2026</td><td>—</td><td>—</td></tr>
+            <tr><td>#A-1100</td><td>Paul Dizon</td><td>1</td><td>₱1,200</td><td><span class="chip paid">Paid</span></td><td>Apr 09, 2026</td><td>—</td><td>—</td></tr>
+            <tr><td>#A-1099</td><td>Kaye Flores</td><td>3</td><td>₱2,580</td><td><span class="chip shipped">Shipped</span></td><td>Apr 08, 2026</td><td>—</td><td>—</td></tr>
+            <tr><td>#A-1098</td><td>R. Santos</td><td>4</td><td>₱3,200</td><td><span class="chip delivered">Delivered</span></td><td>Apr 08, 2026</td><td>—</td><td>—</td></tr>
           </tbody>
         </table>
       </section>

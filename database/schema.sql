@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS orders (
   region VARCHAR(120) NOT NULL,
   zip_code VARCHAR(20) NOT NULL,
   payment_method VARCHAR(40) NOT NULL,
+  payment_receipt VARCHAR(255) NULL,
   status ENUM('Pending', 'Paid', 'Shipped', 'Delivered', 'Cancelled') NOT NULL DEFAULT 'Pending',
   subtotal DECIMAL(10,2) NOT NULL DEFAULT 0,
   shipping_fee DECIMAL(10,2) NOT NULL DEFAULT 0,
