@@ -1,3 +1,4 @@
+
 name: Deploy to InfinityFree
 
 on:
@@ -8,6 +9,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -18,7 +20,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./
-          server-dir: /htdocs/
+          server-dir: /artisan.fwh.is/htdocs/
           exclude: |
             **/.git*
             **/.git*/**
